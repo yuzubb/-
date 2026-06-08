@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>画面共有</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f0f0f0;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px 14px 40px;
+}
+.wrap { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 14px; }
+h1 { font-size: 19px; font-weight: 700; color: #111; text-align: center; padding: 4px 0; }
+.btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  border: 1.5px solid #ddd;
+  background: #fff;
+  color: #111;
+  padding: 14px 10px;
+  transition: background .15s;
+}
+button:hover:not(:disabled) { background: #f5f5f5; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+button.primary { background: #111; color: #fff; border-color: #111; }
+button.primary:hover:not(:disabled) { background: #333; }
+button.danger { border-color: #f5a0a0; color: #c0392b; }
+button.danger:hover:not(:disabled) { background: #fff5f5; }
+.icon { font-size: 22px; display: block; margin-bottom: 5px; }
+.panel { display: none; flex-direction: column; gap: 12px; }
+.panel.active { display: flex; }
+.card {
+  background: #fff;
+  border: 1.5px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 16px;
+}
+.lbl { font-size: 12px; color: #888; margin-bottom: 8px; }
+.code-row { display: flex; align-items: center; gap: 10px; }
+#host-code {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  flex: 1;
+  color: #111;
+}
+input[type=text] {
+  width: 100%;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-align: center;
+  padding: 10px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+  color: #111;
+  margin-bottom: 10px;
+}
+.status { font-size: 13px; color: #666; display: flex; align-items: center; gap: 8px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #ccc; flex-shrink: 0; transition: background .3s; }
+video {
+  width: 100%;
+  border-radius: 10px;
+  background: #000;
+  display: none;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+}
+.info {
+  background: #fffbe6;
+  border: 1.5px solid #ffe58f;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #555;
+  line-height: 1.7;
+}
+.small-btn { font-size: 12px; padding: 6px 12px; border-radius: 8px; }
+.full-btn { width: 100%; padding: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📡 画面共有</h1>
+
+  <div class="btn-grid">
+    <button id="btn-host" onclick="goHost()">
+      <span class="icon">🖥️</span>画面を共有
+    </button>
+    <button id="btn-view" onclick="goViewer()">
+      <span class="icon">📱</span>画面を見る
+    </button>
+  </div>
+
+  <!-- HOST -->
+  <div id="host-panel" class="panel">
+    <div class="card">
+      <p class="lbl">接続コード（相手に教える）</p>
+      <div class="code-row">
+        <span id="host-code">------</span>
+        <button class="small-btn" onclick="copyCode()">コピー</button>
+      </div>
+    </div>
+    <div class="status">
+      <span class="dot" id="h-dot"></span>
+      <span id="h-txt">サーバーに接続中...</span>
+    </div>
+    <video id="local-video" autoplay muted playsinline></video>
+    <button class="danger full-btn" onclick="stopHost()">■ 共有を停止</button>
+  </div>
+
+  <!-- VIEWER -->
+  <div id="view-panel" class="panel">
+    <div class="card">
+      <p class="lbl">6桁のコードを入力</p>
+      <input id="code-input" type="text" maxlength="6" placeholder="000000"
+        oninput="this.value=this.value.replace(/\D/g,'')" inputmode="numeric">
+      <button class="primary full-btn" onclick="connectViewer()">接続する</button>
+    </div>
+    <div class="status">
+      <span class="dot" id="v-dot"></span>
+      <span id="v-txt">コードを入力してください</span>
+    </div>
+    <video id="remote-video" autoplay playsinline></video>
+    <button id="fs-btn" class="full-btn" style="display:none" onclick="goFullscreen()">⛶ フルスクリーン</button>
+    <button class="danger full-btn" onclick="stopViewer()">✕ 切断</button>
+  </div>
+
+  <div class="info">
+    ⚠️ 同じWi-Fiなら <code>http://&lt;TermuxのIP&gt;:8765</code> でアクセス。<br>
+    外部からアクセスするには ngrok 等でトンネルしてください：<br>
+    <code>ngrok http 8765</code>
+  </div>
+</div>
+
+<script>
+// WebSocketサーバーのURL（同じホストに接続）
+const WS_URL = `ws://${location.host}/ws`;
+
+let ws = null;
+let pc = null;
+let localStream = null;
+let role = null;
+
+const ICE = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' }
+  ]
+};
+
+function setH(txt, color) {
+  document.getElementById('h-txt').textContent = txt;
+  document.getElementById('h-dot').style.background = color || '#ccc';
+}
+function setV(txt, color) {
+  document.getElementById('v-txt').textContent = txt;
+  document.getElementById('v-dot').style.background = color || '#ccc';
+}
+function lock() {
+  document.getElementById('btn-host').disabled = true;
+  document.getElementById('btn-view').disabled = true;
+}
+function unlock() {
+  document.getElementById('btn-host').disabled = false;
+  document.getElementById('btn-view').disabled = false;
+}
+
+// --- WebSocket接続 ---
+function connectWS(onOpen) {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = onOpen;
+  ws.onmessage = e => handleMsg(JSON.parse(e.data));
+  ws.onerror = () => {
+    if (role === 'host') setH('サーバー接続エラー', '#e74c3c');
+    else setV('サーバー接続エラー', '#e74c3c');
+  };
+  ws.onclose = () => {
+    if (role === 'host') setH('切断されました', '#e74c3c');
+    else setV('切断されました', '#e74c3c');
+  };
+}
+
+function send(obj) { ws && ws.readyState === 1 && ws.send(JSON.stringify(obj)); }
+
+// --- メッセージハンドラ ---
+async function handleMsg(msg) {
+  switch (msg.type) {
+    case 'created':
+      document.getElementById('host-code').textContent = msg.code;
+      setH('接続待機中... ビューワーを待っています', '#f5a623');
+      break;
+
+    case 'joined':
+      setV('ホストに接続中... 画面転送を開始します', '#f5a623');
+      break;
+
+    case 'viewer_joined':
+      setH('ビューワーが参加しました！ offer送信中...', '#f5a623');
+      await createOffer();
+      break;
+
+    case 'offer':
+      await handleOffer(msg);
+      break;
+
+    case 'answer':
+      await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+      break;
+
+    case 'candidate':
+      if (pc) await pc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(() => {});
+      break;
+
+    case 'host_disconnected':
+      setV('ホストが切断しました', '#e74c3c');
+      cleanupPC();
+      document.getElementById('remote-video').style.display = 'none';
+      document.getElementById('fs-btn').style.display = 'none';
+      break;
+
+    case 'viewer_disconnected':
+      setH('ビューワーが切断しました。再接続を待っています', '#f5a623');
+      break;
+
+    case 'error':
+      if (role === 'host') setH('エラー: ' + msg.msg, '#e74c3c');
+      else setV('エラー: ' + msg.msg, '#e74c3c');
+      break;
+  }
+}
+
+// --- PeerConnection共通 ---
+function createPC() {
+  pc = new RTCPeerConnection(ICE);
+  pc.onicecandidate = e => {
+    if (e.candidate) send({ type: 'candidate', candidate: e.candidate });
+  };
+  pc.onconnectionstatechange = () => {
+    const s = pc.connectionState;
+    if (role === 'host') {
+      if (s === 'connected') setH('✓ 接続中 — 画面共有中', '#27ae60');
+      if (s === 'disconnected' || s === 'failed') setH('接続が切れました', '#e74c3c');
+    } else {
+      if (s === 'connected') setV('✓ 受信中', '#27ae60');
+      if (s === 'disconnected' || s === 'failed') setV('接続が切れました', '#e74c3c');
+    }
+  };
+  pc.ontrack = e => {
+    const vid = document.getElementById('remote-video');
+    vid.srcObject = e.streams[0];
+    vid.style.display = 'block';
+    document.getElementById('fs-btn').style.display = 'block';
+  };
+  return pc;
+}
+
+function cleanupPC() {
+  if (pc) { pc.close(); pc = null; }
+}
+
+// --- HOST ---
+async function goHost() {
+  lock();
+  role = 'host';
+  document.getElementById('host-panel').classList.add('active');
+  setH('画面の許可を確認中...', '#f5a623');
+
+  try {
+    let stream;
+    if (navigator.mediaDevices.getDisplayMedia) {
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: true
+      });
+    } else {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    }
+    localStream = stream;
+    const vid = document.getElementById('local-video');
+    vid.srcObject = stream;
+    vid.style.display = 'block';
+
+    stream.getTracks()[0].onended = () => stopHost();
+
+    setH('サーバーに接続中...', '#f5a623');
+    connectWS(() => send({ type: 'create' }));
+  } catch (err) {
+    setH('エラー: ' + err.message, '#e74c3c');
+    document.getElementById('host-panel').classList.remove('active');
+    unlock();
+  }
+}
+
+async function createOffer() {
+  createPC();
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  send({ type: 'offer', sdp: pc.localDescription });
+}
+
+function stopHost() {
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  cleanupPC();
+  if (ws) { ws.close(); ws = null; }
+  document.getElementById('local-video').style.display = 'none';
+  document.getElementById('local-video').srcObject = null;
+  document.getElementById('host-panel').classList.remove('active');
+  document.getElementById('host-code').textContent = '------';
+  role = null;
+  unlock();
+}
+
+function copyCode() {
+  const code = document.getElementById('host-code').textContent;
+  navigator.clipboard && navigator.clipboard.writeText(code).then(() => {
+    const b = event.target; const o = b.textContent;
+    b.textContent = '✓ 完了'; setTimeout(() => b.textContent = o, 1400);
+  });
+}
+
+// --- VIEWER ---
+function goViewer() {
+  lock();
+  role = 'viewer';
+  document.getElementById('view-panel').classList.add('active');
+}
+
+async function connectViewer() {
+  const code = document.getElementById('code-input').value.trim();
+  if (code.length !== 6) { setV('6桁のコードを入力してください', '#e74c3c'); return; }
+  setV('サーバーに接続中...', '#f5a623');
+  connectWS(() => send({ type: 'join', code }));
+}
+
+async function handleOffer(msg) {
+  createPC();
+  await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  send({ type: 'answer', sdp: pc.localDescription });
+}
+
+function stopViewer() {
+  cleanupPC();
+  if (ws) { ws.close(); ws = null; }
+  const vid = document.getElementById('remote-video');
+  vid.style.display = 'none'; vid.srcObject = null;
+  document.getElementById('fs-btn').style.display = 'none';
+  document.getElementById('view-panel').classList.remove('active');
+  document.getElementById('code-input').value = '';
+  role = null;
+  unlock();
+}
+
+function goFullscreen() {
+  const vid = document.getElementById('remote-video');
+  (vid.requestFullscreen || vid.webkitRequestFullscreen || vid.mozRequestFullScreen).call(vid);
+}
+</script>
+</body>
+</html>
