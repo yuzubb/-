@@ -2,157 +2,457 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>画面共有</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CASTLY — 画面共有</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --surface2: #1a1a24;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --accent: #7c6dfa;
+  --accent2: #a78bfa;
+  --green: #34d399;
+  --red: #f87171;
+  --amber: #fbbf24;
+  --text: #f0f0f8;
+  --muted: #6b7280;
+  --muted2: #9ca3af;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f0f0f0;
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+}
+
+/* background grid */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(124,109,250,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,109,250,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 20px 14px 40px;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 60px;
 }
-.wrap { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 14px; }
-h1 { font-size: 19px; font-weight: 700; color: #111; text-align: center; padding: 4px 0; }
-.btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-button {
+
+/* HEADER */
+.header {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40px;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #fff 0%, var(--accent2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.logo span { color: var(--accent); -webkit-text-fill-color: var(--accent); }
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 10px;
+}
+.pulse {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background .3s;
+}
+.pulse.on { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulseAnim 2s infinite; }
+.pulse.warn { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.pulse.err { background: var(--red); }
+@keyframes pulseAnim { 0%,100%{opacity:1}50%{opacity:.4} }
+
+/* MAIN CARD */
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: .5;
+}
+
+/* MODE SELECT */
+.mode-select {
+  padding: 28px 24px 0;
+}
+.mode-label {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.mode-tab {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
   cursor: pointer;
-  font-family: inherit;
+  transition: all .2s;
+  text-align: left;
+  color: var(--muted2);
+  font-family: 'DM Sans', sans-serif;
+}
+.mode-tab:hover { border-color: var(--border2); color: var(--text); }
+.mode-tab.active {
+  border-color: var(--accent);
+  background: rgba(124,109,250,0.1);
+  color: var(--text);
+}
+.mode-tab .tab-icon { font-size: 20px; margin-bottom: 8px; display: block; }
+.mode-tab .tab-title { font-size: 13px; font-weight: 500; display: block; }
+.mode-tab .tab-sub { font-size: 11px; color: var(--muted); margin-top: 2px; display: block; }
+
+/* DIVIDER */
+.divider { height: 1px; background: var(--border); margin: 0 24px; }
+
+/* PANEL */
+.panel { padding: 24px; display: none; flex-direction: column; gap: 16px; }
+.panel.active { display: flex; }
+
+/* STATUS BAR */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--muted2);
+  font-family: 'DM Mono', monospace;
+  min-height: 40px;
+}
+
+/* CODE DISPLAY */
+.code-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+}
+.code-box-label {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.code-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#host-code {
+  font-family: 'Syne', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: var(--text);
+}
+.copy-btn {
+  background: rgba(124,109,250,0.15);
+  border: 1px solid rgba(124,109,250,0.3);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  color: var(--accent2);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.copy-btn:hover { background: rgba(124,109,250,0.25); }
+
+/* CODE INPUT */
+.input-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.input-box label {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+#code-input {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 28px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  letter-spacing: 8px;
+  text-align: center;
+  color: var(--text);
+  width: 100%;
+  outline: none;
+  transition: border-color .2s;
+}
+#code-input:focus { border-color: var(--accent); }
+#code-input::placeholder { color: var(--muted); letter-spacing: 4px; font-size: 20px; }
+
+/* BUTTONS */
+.btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   font-weight: 500;
-  border-radius: 12px;
-  border: 1.5px solid #ddd;
-  background: #fff;
-  color: #111;
-  padding: 14px 10px;
-  transition: background .15s;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
-button:hover:not(:disabled) { background: #f5f5f5; }
-button:disabled { opacity: .4; cursor: not-allowed; }
-button.primary { background: #111; color: #fff; border-color: #111; }
-button.primary:hover:not(:disabled) { background: #333; }
-button.danger { border-color: #f5a0a0; color: #c0392b; }
-button.danger:hover:not(:disabled) { background: #fff5f5; }
-.icon { font-size: 22px; display: block; margin-bottom: 5px; }
-.panel { display: none; flex-direction: column; gap: 12px; }
-.panel.active { display: flex; }
-.card {
-  background: #fff;
-  border: 1.5px solid #e5e5e5;
-  border-radius: 12px;
-  padding: 16px;
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
 }
-.lbl { font-size: 12px; color: #888; margin-bottom: 8px; }
-.code-row { display: flex; align-items: center; gap: 10px; }
-#host-code {
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: 6px;
-  flex: 1;
-  color: #111;
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--muted2);
 }
-input[type=text] {
-  width: 100%;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 6px;
-  text-align: center;
-  padding: 10px;
-  border: 1.5px solid #ddd;
-  border-radius: 8px;
-  background: #fafafa;
-  color: #111;
-  margin-bottom: 10px;
+.btn-ghost:hover { border-color: var(--red); color: var(--red); }
+.btn-ghost:disabled { opacity: .3; cursor: not-allowed; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--muted2);
 }
-.status { font-size: 13px; color: #666; display: flex; align-items: center; gap: 8px; }
-.dot { width: 9px; height: 9px; border-radius: 50%; background: #ccc; flex-shrink: 0; transition: background .3s; }
-video {
-  width: 100%;
-  border-radius: 10px;
+.btn-outline:hover { border-color: var(--border2); background: var(--surface2); color: var(--text); }
+
+/* VIDEO */
+.video-wrap {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
   background: #000;
   display: none;
   aspect-ratio: 16/9;
-  object-fit: contain;
 }
-.info {
-  background: #fffbe6;
-  border: 1.5px solid #ffe58f;
+.video-wrap.active { display: block; }
+video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.video-badge {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* INFO */
+.info-box {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 16px;
+  background: rgba(251,191,36,0.05);
+  border: 1px solid rgba(251,191,36,0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 12px;
+  color: var(--muted2);
+  line-height: 1.7;
+  font-family: 'DM Mono', monospace;
+}
+.info-box code {
+  color: var(--amber);
+  background: rgba(251,191,36,0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* DEVICE WARNING */
+.device-warn {
+  background: rgba(248,113,113,0.06);
+  border: 1px solid rgba(248,113,113,0.2);
   border-radius: 10px;
   padding: 12px 14px;
   font-size: 12px;
-  color: #555;
-  line-height: 1.7;
+  color: #fca5a5;
+  font-family: 'DM Mono', monospace;
+  line-height: 1.6;
+  display: none;
 }
-.small-btn { font-size: 12px; padding: 6px 12px; border-radius: 8px; }
-.full-btn { width: 100%; padding: 12px; }
+
+@media (max-width: 360px) {
+  #host-code { font-size: 28px; letter-spacing: 5px; }
+  #code-input { font-size: 22px; letter-spacing: 5px; }
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>📡 画面共有</h1>
-
-  <div class="btn-grid">
-    <button id="btn-host" onclick="goHost()">
-      <span class="icon">🖥️</span>画面を共有
-    </button>
-    <button id="btn-view" onclick="goViewer()">
-      <span class="icon">📱</span>画面を見る
-    </button>
+<div class="app">
+  <div class="header">
+    <div class="logo">CAST<span>LY</span></div>
+    <div class="status-pill">
+      <div class="pulse" id="global-pulse"></div>
+      <span id="global-status">待機中</span>
+    </div>
   </div>
 
-  <!-- HOST -->
-  <div id="host-panel" class="panel">
-    <div class="card">
-      <p class="lbl">接続コード（相手に教える）</p>
-      <div class="code-row">
-        <span id="host-code">------</span>
-        <button class="small-btn" onclick="copyCode()">コピー</button>
+  <div class="card">
+    <div class="mode-select">
+      <p class="mode-label">モードを選択</p>
+      <div class="mode-tabs">
+        <button class="mode-tab" id="tab-host" onclick="selectMode('host')">
+          <span class="tab-icon">🖥️</span>
+          <span class="tab-title">配信する</span>
+          <span class="tab-sub">画面 / カメラ</span>
+        </button>
+        <button class="mode-tab" id="tab-view" onclick="selectMode('view')">
+          <span class="tab-icon">📺</span>
+          <span class="tab-title">見る</span>
+          <span class="tab-sub">コードで接続</span>
+        </button>
       </div>
     </div>
-    <div class="status">
-      <span class="dot" id="h-dot"></span>
-      <span id="h-txt">サーバーに接続中...</span>
+
+    <div class="divider"></div>
+
+    <!-- HOST PANEL -->
+    <div class="panel" id="host-panel">
+      <div id="device-warn" class="device-warn">
+        ⚠ このブラウザは画面収録に非対応です。<br>カメラ映像を代わりに送信します。
+      </div>
+
+      <div class="status-bar">
+        <div class="pulse" id="h-dot"></div>
+        <span id="h-txt">「配信を開始」を押してください</span>
+      </div>
+
+      <div class="code-box" id="code-box" style="display:none">
+        <p class="code-box-label">接続コード — 相手に共有</p>
+        <div class="code-display">
+          <span id="host-code">------</span>
+          <button class="copy-btn" onclick="copyCode()">コピー</button>
+        </div>
+      </div>
+
+      <div class="video-wrap" id="local-wrap">
+        <video id="local-video" autoplay muted playsinline></video>
+        <div class="video-badge">
+          <div class="pulse on"></div> LIVE
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-start" onclick="startHost()">
+        ▶ 配信を開始
+      </button>
+      <button class="btn btn-ghost" id="btn-stop" style="display:none" onclick="stopHost()">
+        ■ 配信を停止
+      </button>
     </div>
-    <video id="local-video" autoplay muted playsinline></video>
-    <button class="danger full-btn" onclick="stopHost()">■ 共有を停止</button>
+
+    <!-- VIEWER PANEL -->
+    <div class="panel" id="view-panel">
+      <div class="status-bar">
+        <div class="pulse" id="v-dot"></div>
+        <span id="v-txt">コードを入力して接続</span>
+      </div>
+
+      <div class="input-box">
+        <label>接続コード（6桁）</label>
+        <input id="code-input" type="text" maxlength="6" placeholder="000000"
+          inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+        <button class="btn btn-primary" onclick="connectViewer()">接続する →</button>
+      </div>
+
+      <div class="video-wrap" id="remote-wrap">
+        <video id="remote-video" autoplay playsinline></video>
+        <div class="video-badge">
+          <div class="pulse on"></div> 受信中
+        </div>
+      </div>
+
+      <button id="fs-btn" class="btn btn-outline" style="display:none" onclick="goFullscreen()">
+        ⛶ フルスクリーン
+      </button>
+      <button class="btn btn-ghost" onclick="stopViewer()">✕ 切断</button>
+    </div>
   </div>
 
-  <!-- VIEWER -->
-  <div id="view-panel" class="panel">
-    <div class="card">
-      <p class="lbl">6桁のコードを入力</p>
-      <input id="code-input" type="text" maxlength="6" placeholder="000000"
-        oninput="this.value=this.value.replace(/\D/g,'')" inputmode="numeric">
-      <button class="primary full-btn" onclick="connectViewer()">接続する</button>
-    </div>
-    <div class="status">
-      <span class="dot" id="v-dot"></span>
-      <span id="v-txt">コードを入力してください</span>
-    </div>
-    <video id="remote-video" autoplay playsinline></video>
-    <button id="fs-btn" class="full-btn" style="display:none" onclick="goFullscreen()">⛶ フルスクリーン</button>
-    <button class="danger full-btn" onclick="stopViewer()">✕ 切断</button>
-  </div>
-
-  <div class="info">
-    ⚠️ 同じWi-Fiなら <code>http://&lt;TermuxのIP&gt;:8765</code> でアクセス。<br>
-    外部からアクセスするには ngrok 等でトンネルしてください：<br>
-    <code>ngrok http 8765</code>
+  <div class="info-box">
+    ⚡ サーバー起動: <code>python server.py</code><br>
+    🌐 外部公開: <code>cloudflared tunnel --url http://localhost:8765</code>
   </div>
 </div>
 
 <script>
-// WebSocketサーバーのURL（同じホストに接続）
-const WS_URL = `ws://${location.host}/ws`;
-
-let ws = null;
-let pc = null;
-let localStream = null;
-let role = null;
-
+const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 const ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -162,146 +462,165 @@ const ICE = {
   ]
 };
 
-function setH(txt, color) {
+let ws = null, pc = null, localStream = null, role = null;
+let currentMode = null;
+
+// --- UI helpers ---
+function setGlobal(txt, state) {
+  document.getElementById('global-status').textContent = txt;
+  const p = document.getElementById('global-pulse');
+  p.className = 'pulse' + (state ? ' ' + state : '');
+}
+function setH(txt, state) {
   document.getElementById('h-txt').textContent = txt;
-  document.getElementById('h-dot').style.background = color || '#ccc';
+  const d = document.getElementById('h-dot');
+  d.className = 'pulse' + (state ? ' ' + state : '');
 }
-function setV(txt, color) {
+function setV(txt, state) {
   document.getElementById('v-txt').textContent = txt;
-  document.getElementById('v-dot').style.background = color || '#ccc';
-}
-function lock() {
-  document.getElementById('btn-host').disabled = true;
-  document.getElementById('btn-view').disabled = true;
-}
-function unlock() {
-  document.getElementById('btn-host').disabled = false;
-  document.getElementById('btn-view').disabled = false;
+  const d = document.getElementById('v-dot');
+  d.className = 'pulse' + (state ? ' ' + state : '');
 }
 
-// --- WebSocket接続 ---
+function selectMode(m) {
+  currentMode = m;
+  document.getElementById('tab-host').classList.toggle('active', m === 'host');
+  document.getElementById('tab-view').classList.toggle('active', m === 'view');
+  document.getElementById('host-panel').classList.toggle('active', m === 'host');
+  document.getElementById('view-panel').classList.toggle('active', m === 'view');
+}
+
+// --- WebSocket ---
 function connectWS(onOpen) {
   ws = new WebSocket(WS_URL);
-  ws.onopen = onOpen;
+  const timer = setTimeout(() => {
+    if (ws.readyState !== 1) {
+      ws.close();
+      if (role === 'host') setH('タイムアウト — サーバーを確認してください', 'err');
+      else setV('タイムアウト — サーバーを確認してください', 'err');
+      setGlobal('エラー', 'err');
+    }
+  }, 3000);
+  ws.onopen = () => { clearTimeout(timer); onOpen(); };
   ws.onmessage = e => handleMsg(JSON.parse(e.data));
   ws.onerror = () => {
-    if (role === 'host') setH('サーバー接続エラー', '#e74c3c');
-    else setV('サーバー接続エラー', '#e74c3c');
+    clearTimeout(timer);
+    if (role === 'host') setH('接続エラー', 'err');
+    else setV('接続エラー', 'err');
+    setGlobal('エラー', 'err');
   };
   ws.onclose = () => {
-    if (role === 'host') setH('切断されました', '#e74c3c');
-    else setV('切断されました', '#e74c3c');
+    if (role === 'host') { setH('切断', 'err'); }
+    else setV('切断', 'err');
   };
 }
-
 function send(obj) { ws && ws.readyState === 1 && ws.send(JSON.stringify(obj)); }
 
-// --- メッセージハンドラ ---
+// --- Messages ---
 async function handleMsg(msg) {
   switch (msg.type) {
     case 'created':
       document.getElementById('host-code').textContent = msg.code;
-      setH('接続待機中... ビューワーを待っています', '#f5a623');
+      document.getElementById('code-box').style.display = 'block';
+      setH('待機中 — コードを相手に共有してください', 'warn');
+      setGlobal('待機中', 'warn');
       break;
-
-    case 'joined':
-      setV('ホストに接続中... 画面転送を開始します', '#f5a623');
-      break;
-
     case 'viewer_joined':
-      setH('ビューワーが参加しました！ offer送信中...', '#f5a623');
+      setH('ビューワー参加 — offer送信中...', 'warn');
       await createOffer();
       break;
-
+    case 'joined':
+      setV('接続中...', 'warn');
+      setGlobal('接続中', 'warn');
+      break;
     case 'offer':
       await handleOffer(msg);
       break;
-
     case 'answer':
       await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
       break;
-
     case 'candidate':
       if (pc) await pc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(() => {});
       break;
-
     case 'host_disconnected':
-      setV('ホストが切断しました', '#e74c3c');
-      cleanupPC();
-      document.getElementById('remote-video').style.display = 'none';
+      setV('配信者が切断しました', 'err');
+      setGlobal('切断', 'err');
+      document.getElementById('remote-wrap').classList.remove('active');
       document.getElementById('fs-btn').style.display = 'none';
+      cleanupPC();
       break;
-
     case 'viewer_disconnected':
-      setH('ビューワーが切断しました。再接続を待っています', '#f5a623');
+      setH('ビューワーが切断 — 再接続待ち', 'warn');
       break;
-
     case 'error':
-      if (role === 'host') setH('エラー: ' + msg.msg, '#e74c3c');
-      else setV('エラー: ' + msg.msg, '#e74c3c');
+      if (role === 'host') setH('エラー: ' + msg.msg, 'err');
+      else setV('エラー: ' + msg.msg, 'err');
       break;
   }
 }
 
-// --- PeerConnection共通 ---
+// --- PeerConnection ---
 function createPC() {
   pc = new RTCPeerConnection(ICE);
-  pc.onicecandidate = e => {
-    if (e.candidate) send({ type: 'candidate', candidate: e.candidate });
-  };
+  pc.onicecandidate = e => { if (e.candidate) send({ type: 'candidate', candidate: e.candidate }); };
   pc.onconnectionstatechange = () => {
     const s = pc.connectionState;
     if (role === 'host') {
-      if (s === 'connected') setH('✓ 接続中 — 画面共有中', '#27ae60');
-      if (s === 'disconnected' || s === 'failed') setH('接続が切れました', '#e74c3c');
+      if (s === 'connected') { setH('配信中', 'on'); setGlobal('配信中', 'on'); }
+      if (s === 'disconnected' || s === 'failed') { setH('接続が切れました', 'err'); setGlobal('切断', 'err'); }
     } else {
-      if (s === 'connected') setV('✓ 受信中', '#27ae60');
-      if (s === 'disconnected' || s === 'failed') setV('接続が切れました', '#e74c3c');
+      if (s === 'connected') { setV('受信中', 'on'); setGlobal('受信中', 'on'); }
+      if (s === 'disconnected' || s === 'failed') { setV('接続が切れました', 'err'); setGlobal('切断', 'err'); }
     }
   };
   pc.ontrack = e => {
     const vid = document.getElementById('remote-video');
     vid.srcObject = e.streams[0];
-    vid.style.display = 'block';
-    document.getElementById('fs-btn').style.display = 'block';
+    document.getElementById('remote-wrap').classList.add('active');
+    document.getElementById('fs-btn').style.display = 'flex';
   };
-  return pc;
 }
-
-function cleanupPC() {
-  if (pc) { pc.close(); pc = null; }
-}
+function cleanupPC() { if (pc) { pc.close(); pc = null; } }
 
 // --- HOST ---
-async function goHost() {
-  lock();
+async function startHost() {
   role = 'host';
-  document.getElementById('host-panel').classList.add('active');
-  setH('画面の許可を確認中...', '#f5a623');
+  setH('メディアの許可を確認中...', 'warn');
+  setGlobal('起動中', 'warn');
+  document.getElementById('btn-start').style.display = 'none';
 
   try {
     let stream;
-    if (navigator.mediaDevices.getDisplayMedia) {
-      stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: { ideal: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: true
-      });
+    const hasDisplay = !!navigator.mediaDevices.getDisplayMedia;
+    if (hasDisplay) {
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: { ideal: 30 }, width: { ideal: 1920 } },
+          audio: true
+        });
+      } catch(e) {
+        // fallback to camera
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('device-warn').style.display = 'block';
+      }
     } else {
       stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      document.getElementById('device-warn').style.display = 'block';
     }
+
     localStream = stream;
     const vid = document.getElementById('local-video');
     vid.srcObject = stream;
-    vid.style.display = 'block';
-
+    document.getElementById('local-wrap').classList.add('active');
+    document.getElementById('btn-stop').style.display = 'flex';
     stream.getTracks()[0].onended = () => stopHost();
 
-    setH('サーバーに接続中...', '#f5a623');
+    setH('サーバーに接続中...', 'warn');
     connectWS(() => send({ type: 'create' }));
   } catch (err) {
-    setH('エラー: ' + err.message, '#e74c3c');
-    document.getElementById('host-panel').classList.remove('active');
-    unlock();
+    setH('エラー: ' + err.message, 'err');
+    document.getElementById('btn-start').style.display = 'flex';
+    setGlobal('エラー', 'err');
   }
 }
 
@@ -317,33 +636,33 @@ function stopHost() {
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   cleanupPC();
   if (ws) { ws.close(); ws = null; }
-  document.getElementById('local-video').style.display = 'none';
   document.getElementById('local-video').srcObject = null;
-  document.getElementById('host-panel').classList.remove('active');
+  document.getElementById('local-wrap').classList.remove('active');
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('btn-start').style.display = 'flex';
+  document.getElementById('code-box').style.display = 'none';
+  document.getElementById('device-warn').style.display = 'none';
   document.getElementById('host-code').textContent = '------';
+  setH('「配信を開始」を押してください', '');
+  setGlobal('待機中', '');
   role = null;
-  unlock();
 }
 
 function copyCode() {
   const code = document.getElementById('host-code').textContent;
   navigator.clipboard && navigator.clipboard.writeText(code).then(() => {
     const b = event.target; const o = b.textContent;
-    b.textContent = '✓ 完了'; setTimeout(() => b.textContent = o, 1400);
+    b.textContent = '✓ コピー完了'; setTimeout(() => b.textContent = o, 1400);
   });
 }
 
 // --- VIEWER ---
-function goViewer() {
-  lock();
-  role = 'viewer';
-  document.getElementById('view-panel').classList.add('active');
-}
-
 async function connectViewer() {
   const code = document.getElementById('code-input').value.trim();
-  if (code.length !== 6) { setV('6桁のコードを入力してください', '#e74c3c'); return; }
-  setV('サーバーに接続中...', '#f5a623');
+  if (code.length !== 6) { setV('6桁のコードを入力してください', 'err'); return; }
+  role = 'viewer';
+  setV('サーバーに接続中...', 'warn');
+  setGlobal('接続中', 'warn');
   connectWS(() => send({ type: 'join', code }));
 }
 
@@ -359,17 +678,18 @@ function stopViewer() {
   cleanupPC();
   if (ws) { ws.close(); ws = null; }
   const vid = document.getElementById('remote-video');
-  vid.style.display = 'none'; vid.srcObject = null;
+  vid.srcObject = null;
+  document.getElementById('remote-wrap').classList.remove('active');
   document.getElementById('fs-btn').style.display = 'none';
-  document.getElementById('view-panel').classList.remove('active');
   document.getElementById('code-input').value = '';
+  setV('コードを入力して接続', '');
+  setGlobal('待機中', '');
   role = null;
-  unlock();
 }
 
 function goFullscreen() {
   const vid = document.getElementById('remote-video');
-  (vid.requestFullscreen || vid.webkitRequestFullscreen || vid.mozRequestFullScreen).call(vid);
+  (vid.requestFullscreen || vid.webkitRequestFullscreen || vid.mozRequestFullScreen || (() => {})).call(vid);
 }
 </script>
 </body>
